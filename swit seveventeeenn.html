@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#07030a">
+    <title>Happy Sweet Seventeen · Lidia</title>
+
+    <!-- Ikon tab (data URI → tidak ada permintaan /favicon.ico yang 404 di Live Server) -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E">
+
+    <!-- Font: Press Start 2P (judul, badge) · VT323 (tombol & panel HUD) · Nunito (isi surat).
+         Semua punya fallback sistem, jadi halaman tetap rapi walau font lambat dimuat. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        /* ======================================================================
+           TEMA — dibuat dari warna video lily_bg_mp4.mp4:
+           pink/magenta lembut · biru muda/putih keperakan · lavender · kuning hangat benang sari
+           di atas latar hampir hitam (sedikit semburat burgundy)
+           ====================================================================== */
+        :root {
+            --bg0: #07030a;
+            --bg1: #12061a;
+
+            --rose: #ff7aa8;          /* pink lembut (sorot kelopak) */
+            --rose-deep: #e8236f;     /* magenta (kelopak pekat) */
+            --magenta: #f0227f;
+            --ice: #d4e4ff;           /* biru muda / putih keperakan (lily putih) */
+            --lav: #b9a2ff;           /* lavender */
+            --amber: #ffc352;         /* kuning hangat benang sari */
+
+            --ink: #fff3f8;
+            --ink-dim: #ecd5e3;
+            --ink-mute: #b79fb0;
+
+            --font-pixel: 'Press Start 2P', 'Courier New', ui-monospace, monospace;
+            --font-hud: 'VT323', 'Courier New', ui-monospace, monospace;
+            --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+            --letter-size: clamp(1.02rem, 2.6vw, 1.1rem);
+
+            /* intensitas overlay (diubah oleh tombol "cahaya") */
+            --o-glow: 0.8;
+            --o-vig: 0.85;
+            --o-wash: 0.85;
+        }
+        body.ov-0 { --o-glow: 0.45; --o-vig: 0.55; --o-wash: 0.55; }
+        body.ov-1 { --o-glow: 0.8;  --o-vig: 0.85; --o-wash: 0.85; }
+        body.ov-2 { --o-glow: 1;    --o-vig: 1;    --o-wash: 1; }
+
+        body.fs-sm { --letter-size: clamp(0.94rem, 2.4vw, 1rem); }
+        body.fs-md { --letter-size: clamp(1.02rem, 2.6vw, 1.1rem); }
+        body.fs-lg { --letter-size: clamp(1.16rem, 3vw, 1.28rem); }
+
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+
+        html { background: var(--bg0); scroll-behavior: auto; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg0);
+            color: var(--ink);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ---------- Latar cadangan (terlihat bila video belum siap / gagal dimuat) ---------- */
+        .fx-base {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(70% 55% at 50% 30%, rgba(200, 50, 125, 0.34), transparent 70%),
+                radial-gradient(60% 50% at 85% 85%, rgba(120, 80, 210, 0.28), transparent 70%),
+                radial-gradient(50% 40% at 10% 80%, rgba(255, 122, 168, 0.12), transparent 70%),
+                linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
+        }
+
+        /* ---------- VIDEO LATAR ---------- */
+        #bg-video {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1.4s ease;
+            transform: translate3d(var(--px, 0px), var(--py, 0px), 0) scale(var(--vscale, 1.07));
+            will-change: transform, opacity;
+        }
+        html.has-video #bg-video { opacity: 1; }
+
+        /* Layar potret (HP): `cover` penuh akan memotong ±70% lebar video lanskap sehingga bunga terpotong.
+           Di sini video diperbesar tapi tetap utuh, ditaruh di bagian atas, tepinya memudar ke latar gelap.
+           Hapus blok ini bila ingin `cover` penuh di semua layar. */
+        @media (max-aspect-ratio: 4/5) {
+            #bg-video {
+                inset: auto;
+                left: -14vw;
+                top: 4svh;
+                width: 128vw;
+                height: 86.5vw;          /* 128vw × 576/852 → rasio asli video */
+                --vscale: 1;
+                -webkit-mask-image: radial-gradient(ellipse 52% 50% at 50% 50%, #000 46%, transparent 100%);
+                mask-image: radial-gradient(ellipse 52% 50% at 50% 50%, #000 46%, transparent 100%);
+            }
+        }
+
+        /* ---------- Lapisan cahaya (di atas video, di bawah teks) ---------- */
+        .fx { position: fixed; inset: 0; pointer-events: none; }
+
+        .fx-glow {
+            z-index: 1;
+            overflow: hidden;
+            opacity: var(--o-glow);
+            transition: opacity 0.7s ease;
+            mix-blend-mode: screen;
+        }
+        .fx-glow::before, .fx-glow::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(70px);
+        }
+        .fx-glow::before {
+            width: 60vmax; height: 60vmax;
+            left: 50%; top: 4%;
+            margin-left: -30vmax;
+            background: radial-gradient(circle, rgba(255, 110, 170, 0.34), transparent 66%);
+            animation: glowA 14s ease-in-out infinite alternate;
+        }
+        .fx-glow::after {
+            width: 46vmax; height: 46vmax;
+            right: -14vmax; bottom: -10vmax;
+            background: radial-gradient(circle, rgba(150, 180, 255, 0.26), transparent 66%);
+            animation: glowB 18s ease-in-out infinite alternate;
+        }
+        @keyframes glowA { from { transform: translate(-3vmax, 0) scale(0.95); } to { transform: translate(4vmax, 3vmax) scale(1.12); } }
+        @keyframes glowB { from { transform: translate(0, 0) scale(1); }         to { transform: translate(-6vmax, -4vmax) scale(1.18); } }
+
+        .fx-vignette {
+            z-index: 1;
+            opacity: var(--o-vig);
+            transition: opacity 0.7s ease;
+            background: radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(4, 1, 6, 0.82) 100%);
+        }
+        .fx-wash {
+            z-index: 1;
+            opacity: var(--o-wash);
+            transition: opacity 0.7s ease;
+            background: linear-gradient(180deg, rgba(8, 3, 12, 0.18) 0%, rgba(8, 3, 12, 0.40) 52%, rgba(8, 3, 12, 0.72) 100%);
+        }
+        .fx-reader {                      /* meredup saat surat dibaca → teks tetap tajam di atas video terang */
+            z-index: 1;
+            background: rgba(6, 2, 9, 0.52);
+            opacity: 0;
+            transition: opacity 0.9s ease;
+        }
+        body.is-reading .fx-reader { opacity: 1; }
+        body.focus .fx-reader { opacity: 1; background: rgba(4, 1, 6, 0.74); }
+
+        .fx-flash {
+            z-index: 4;
+            opacity: 0;
+            background: radial-gradient(circle at 50% 45%, rgba(255, 220, 235, 0.55), rgba(255, 122, 168, 0.16) 45%, transparent 72%);
+        }
+        .fx-flash.go { animation: flash 1.1s ease-out; }
+        @keyframes flash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
+
+        #fx-canvas {
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.8s ease;
+        }
+        body.focus #fx-canvas { opacity: 0.35; }
+
+        /* ---------- Bilah progres baca ---------- */
+        #progress {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+        }
+        #progress i, .hud-bar i {
+            display: block;
+            height: 100%;
+            width: 100%;
+            transform-origin: left center;
+            transform: scaleX(0);
+            background: linear-gradient(90deg, var(--rose-deep), var(--rose), var(--lav), var(--ice));
+        }
+        #progress::after, .hud-bar::after {     /* garis-garis piksel seperti bar Minecraft */
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(90deg, transparent 0 10px, rgba(7, 3, 10, 0.55) 10px 12px);
+        }
+
+        /* ---------- Konten ---------- */
+        main { position: relative; z-index: 3; }
+
+        .section {
+            position: relative;
+            min-height: 100vh;
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: clamp(20px, 5vw, 48px);
+        }
+
+        /* ---------- LANDING ---------- */
+        #landing {
+            justify-content: flex-end;
+            text-align: center;
+            padding-bottom: max(9svh, 76px);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.9em;
+            margin: 0 0 clamp(18px, 3vw, 26px);
+            padding: 0.95em 1.25em;
+            font-family: var(--font-pixel);
+            font-size: clamp(0.55rem, 2.1vw, 0.72rem);
+            line-height: 1.2;
+            letter-spacing: 0.06em;
+            color: var(--ink);
+            background: rgba(16, 6, 20, 0.72);
+            box-shadow:
+                inset -3px -3px 0 rgba(0, 0, 0, 0.5),
+                inset 3px 3px 0 rgba(255, 150, 190, 0.38),
+                0 0 0 3px #1a0820,
+                0 0 26px rgba(255, 90, 150, 0.38);
+        }
+        .badge::before {
+            content: "";
+            flex: none;
+            width: 0.7em; height: 0.7em;
+            background: var(--rose);
+            box-shadow: 0 0 10px var(--rose);
+            animation: blink 1.6s steps(2, end) infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.25; } }
+
+        .title {
+            margin: 0 0 clamp(26px, 4vw, 38px);
+            max-width: 21em;
+            font-family: var(--font-pixel);
+            font-weight: 400;
+            font-size: clamp(1rem, 0.6rem + 2.6vw, 2.2rem);
+            line-height: 1.7;
+            letter-spacing: 0;
+            color: #fff;
+            text-shadow: 3px 3px 0 #5b1646, 0 0 22px rgba(255, 100, 170, 0.55);
+            text-wrap: balance;
+            overflow-wrap: anywhere;
+        }
+        .title .w {
+            display: inline-block;
+            animation: pixelIn 0.8s steps(6, end) backwards;
+            animation-delay: calc(0.35s + var(--i, 0) * 0.16s);
+        }
+        @keyframes pixelIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ---------- Tombol gaya Minecraft ---------- */
+        .mc-btn {
+            font-family: var(--font-hud);
+            font-size: 1.3rem;
+            line-height: 1.1;
+            color: #fff;
+            background: #7a2a62;
+            border: 0;
+            border-radius: 0;
+            padding: 0.5em 0.7em;
+            cursor: pointer;
+            text-shadow: 2px 2px 0 #3d0f33;
+            box-shadow:
+                inset -3px -3px 0 #3d0f33,
+                inset 3px 3px 0 #c45a9f,
+                0 0 0 3px #12040f;
+            transition: background 0.15s, transform 0.08s;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .mc-btn:hover { background: #923578; }
+        .mc-btn:active {
+            transform: translateY(2px);
+            box-shadow:
+                inset 3px 3px 0 #3d0f33,
+                inset -3px -3px 0 #c45a9f,
+                0 0 0 3px #12040f;
+        }
+        .mc-btn[aria-pressed="true"], .mc-btn.on { background: #c2287a; }
+        .mc-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+        .mc-btn:focus-visible { outline: 3px solid var(--ice); outline-offset: 4px; }
+
+        .cta {
+            font-size: clamp(1.5rem, 5vw, 1.9rem);
+            padding: 0.55em 1.5em;
+            animation: ctaIn 0.8s steps(6, end) 1.9s backwards, ctaBob 2.2s steps(2, end) 2.8s infinite;
+        }
+        .cta .face { font-family: var(--font-body); font-weight: 700; letter-spacing: 0.02em; }
+        @keyframes ctaIn  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        @keyframes ctaBob { 50% { transform: translateY(-3px); } }
+
+        .scroll-hint {
+            margin: 22px 0 0;
+            font-family: var(--font-hud);
+            font-size: 1.15rem;
+            letter-spacing: 0.18em;
+            color: var(--ink-dim);
+            animation: pixelIn 0.8s steps(6, end) 3s backwards;
+            transition: opacity 0.5s ease;
+        }
+        .scroll-hint::after {
+            content: "";
+            display: block;
+            width: 10px; height: 10px;
+            margin: 10px auto 0;
+            background: var(--rose);
+            box-shadow: 0 10px 0 var(--rose), 0 20px 0 rgba(255, 122, 168, 0.5);
+            animation: drop 1.4s steps(3, end) infinite;
+        }
+        @keyframes drop { 0% { transform: translateY(0); } 100% { transform: translateY(8px); } }
+        body.has-scrolled .scroll-hint { opacity: 0; }
+
+        /* ---------- SURAT ---------- */
+        #letter {
+            justify-content: flex-start;
+            padding-top: clamp(70px, 13svh, 130px);
+            padding-bottom: clamp(120px, 18svh, 170px);
+        }
+
+        .letter-card {
+            width: 100%;
+            max-width: 720px;
+            padding: clamp(22px, 5vw, 46px);
+            background: rgba(12, 5, 16, 0.74);
+            -webkit-backdrop-filter: blur(14px) saturate(130%);
+            backdrop-filter: blur(14px) saturate(130%);
+            box-shadow:
+                0 0 0 4px #1b0a22,
+                0 0 0 6px rgba(255, 122, 168, 0.5),
+                inset 0 0 0 2px rgba(255, 255, 255, 0.06),
+                0 26px 70px rgba(0, 0, 0, 0.6),
+                0 0 64px rgba(255, 80, 150, 0.2);
+        }
+        .letter-card p {
+            margin: 0 0 1.5em;
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: var(--letter-size);
+            line-height: 1.95;
+            letter-spacing: 0.005em;
+            color: #fbeff5;
+            overflow-wrap: break-word;
+            transition: font-size 0.25s ease;
+        }
+        .letter-card p:last-of-type { margin-bottom: 0; }
+
+        .pixel-heart {
+            display: block;
+            margin: clamp(26px, 5vw, 38px) auto 0;
+            width: 36px; height: 32px;
+            filter: drop-shadow(0 0 10px rgba(255, 90, 150, 0.7));
+            animation: heart 1.4s steps(2, end) infinite;
+        }
+        @keyframes heart { 50% { transform: translateY(-3px) scale(1.06); } }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(18px);
+            transition: opacity 0.85s ease, transform 0.85s cubic-bezier(0.2, 0.7, 0.2, 1);
+            transition-delay: var(--d, 0s);
+        }
+        .reveal.in { opacity: 1; transform: none; }
+
+        /* ---------- HUD (kontrol) ---------- */
+        .hud {
+            position: fixed;
+            right: max(12px, env(safe-area-inset-right));
+            bottom: max(12px, env(safe-area-inset-bottom));
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 12px;
+            transition: opacity 0.4s ease;
+        }
+        body.focus .hud:not(:hover):not(:focus-within) { opacity: 0.3; }
+
+        .hud-toggle { display: inline-flex; align-items: center; gap: 0.6em; padding: 0.45em 0.8em; }
+        .hud-toggle .bars { width: 14px; height: 10px; background: linear-gradient(#fff 0 2px, transparent 2px 4px, #fff 4px 6px, transparent 6px 8px, #fff 8px 10px); }
+
+        .hud-panel {
+            width: min(340px, calc(100vw - 28px));
+            max-height: calc(100svh - 96px);
+            overflow-y: auto;
+            padding: 14px;
+            background: rgba(14, 6, 18, 0.86);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            box-shadow:
+                0 0 0 3px #1b0a22,
+                0 0 0 5px rgba(255, 122, 168, 0.42),
+                inset 0 0 0 2px rgba(255, 255, 255, 0.05),
+                0 18px 50px rgba(0, 0, 0, 0.6);
+            transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+        }
+        .hud.collapsed .hud-panel { display: none; }      /* dilipat: panel tidak memakan tempat, tombol menu tetap di pojok bawah */
+
+        .grp + .grp { margin-top: 14px; padding-top: 12px; border-top: 2px dashed rgba(255, 122, 168, 0.28); }
+        .grp h3 {
+            margin: 0 0 9px;
+            font-family: var(--font-pixel);
+            font-weight: 400;
+            font-size: 0.58rem;
+            letter-spacing: 0.1em;
+            color: var(--rose);
+        }
+        .hud-panel .row { display: grid; gap: 9px; margin-bottom: 9px; }
+        .hud-panel .row:last-child { margin-bottom: 0; }
+        .hud-panel .r2 { grid-template-columns: 1fr 1fr; }
+        .hud-panel .r3 { grid-template-columns: 1fr 1fr 1fr; }
+        .hud-panel .mc-btn { font-size: 1.2rem; padding: 0.5em 0.3em; white-space: nowrap; }
+
+        .prog-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-hud); font-size: 1.15rem; color: var(--ink-dim); }
+        .hud-bar { position: relative; flex: 1; height: 12px; background: rgba(0, 0, 0, 0.5); box-shadow: 0 0 0 2px #1b0a22; overflow: hidden; }
+        .prog-row b { min-width: 3.2em; text-align: right; font-weight: 400; color: #fff; }
+
+        /* ---------- Hormati preferensi "kurangi gerakan" ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-delay: 0s !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                transition-delay: 0s !important;
+            }
+        }
+    </style>
+</head>
+<body class="ov-1 fs-md">
+
+    <!-- Lapisan latar: cadangan → video → cahaya → partikel -->
+    <div class="fx-base" aria-hidden="true"></div>
+    <video id="bg-video" muted loop playsinline preload="auto" disablepictureinpicture aria-hidden="true" tabindex="-1"></video>
+    <div class="fx fx-glow" id="fx-glow" aria-hidden="true"></div>
+    <div class="fx fx-vignette" aria-hidden="true"></div>
+    <div class="fx fx-wash" aria-hidden="true"></div>
+    <div class="fx fx-reader" aria-hidden="true"></div>
+    <canvas class="fx" id="fx-canvas" aria-hidden="true"></canvas>
+    <div class="fx fx-flash" id="fx-flash" aria-hidden="true"></div>
+
+    <!-- Progres baca -->
+    <div id="progress" role="progressbar" aria-label="progres membaca surat" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progress-fill"></i></div>
+
+    <main>
+        <!-- BAGIAN 1: Landing -->
+        <section class="section" id="landing">
+            <p class="badge" id="badge"></p>
+            <h1 class="title" id="title"></h1>
+            <button type="button" class="mc-btn cta" id="btn-enter" aria-label="buka surat"><span class="face">open</span></button>
+            <p class="scroll-hint" aria-hidden="true"></p>
+        </section>
+
+        <!-- BAGIAN 2: Surat -->
+        <section class="section" id="letter">
+            <article class="letter-card reveal" id="letter-card">
+                <div id="letter-body"></div>
+                <svg class="pixel-heart" viewBox="0 0 9 8" shape-rendering="crispEdges" aria-hidden="true">
+                    <path fill="#ff5c9a" d="M1 0h2v1H1zM6 0h2v1H6zM0 1h4v1H0zM5 1h4v1H5zM0 2h9v2H0zM1 4h7v1H1zM2 5h5v1H2zM3 6h3v1H3zM4 7h1v1H4z"/>
+                    <rect x="1" y="1" width="1" height="1" fill="#fff" opacity="0.65"/>
+                </svg>
+            </article>
+        </section>
+    </main>
+
+    <!-- HUD: kontrol (bisa dilipat dengan tombol "menu") -->
+    <aside class="hud" id="hud" aria-label="kontrol tampilan">
+        <button type="button" class="mc-btn hud-toggle" id="hud-toggle" aria-expanded="true" aria-controls="hud-panel"><span class="bars" aria-hidden="true"></span><span>menu</span></button>
+
+        <div class="hud-panel" id="hud-panel">
+            <section class="grp" aria-label="latar video">
+                <h3>background</h3>
+                <div class="row r2">
+                    <button type="button" class="mc-btn" id="b-play">|| pause</button>
+                    <button type="button" class="mc-btn" id="b-restart">&lt;&lt; again</button>
+                </div>
+                <div class="row">
+                    <button type="button" class="mc-btn" id="b-overlay">light: medium</button>
+                    <button type="button" class="mc-btn" id="b-particles">kincring-kincring: high</button>
+                </div>
+            </section>
+
+            <section class="grp" aria-label="bacaan surat">
+                <h3>read</h3>
+                <div class="row r3" role="group" aria-label="ukuran huruf surat">
+                    <button type="button" class="mc-btn" data-size="sm" aria-pressed="false">low</button>
+                    <button type="button" class="mc-btn" data-size="md" aria-pressed="true">medium</button>
+                    <button type="button" class="mc-btn" data-size="lg" aria-pressed="false">high</button>
+                </div>
+                <div class="row r3">
+                    <button type="button" class="mc-btn" id="b-focus" aria-pressed="false">focus</button>
+                    <button type="button" class="mc-btn" id="b-top">^ up</button>
+                    <button type="button" class="mc-btn" id="b-bottom">v bown</button>
+                </div>
+                <div class="prog-row"><span>read</span><div class="hud-bar"><i id="hud-fill"></i></div><b id="hud-pct">0%</b></div>
+            </section>
+
+            <section class="grp" aria-label="kejutan">
+                <h3>surprise</h3>
+                <div class="row"><button type="button" class="mc-btn" id="b-surprise">* surprise *</button></div>
+            </section>
+        </div>
+    </aside>
+
+    <noscript>
+        <p style="position:relative;z-index:50;color:#fff3f8;text-align:center;padding:24px;font-family:sans-serif">
+            Aktifkan JavaScript untuk melihat kejutan ulang tahun ini.
+        </p>
+    </noscript>
+
+
+    <!-- ======================================================================
+         ✏️  BLOK TEKS — SEMUA UCAPAN ADA DI SINI (ditampilkan persis apa adanya:
+         huruf kecil, tanda baca, dan typo tidak diubah oleh kode).
+         Satu item di `paragraphs` = satu paragraf.
+         ====================================================================== -->
+    <script>
+        window.MESSAGE_DATA = {
+
+            /* Nama file video latar (taruh di folder yang sama dengan index.html) */
+            videoSrc: `lily_bg_mp4.mp4`,
+
+            /* Badge tanggal di halaman pembuka */
+            badge: `25 november`,
+
+            /* Judul utama */
+            title: `happy sweet seventeen
+                  lidia_cinthia_putri`,
+
+            /* Isi surat */
+            paragraphs: [
+                `it’s finally your seventeenth!! honestly, it’s crazy how much things have changed since your last birthday. a year ago, i was writing you a birtjday message when we were still in the process of getting to know each other. back then, i was just someone who wanted to get a little closer to you, and now i get to celebrate this special day as your boyfiee. your cool boyfiee, and trust me, that’s something i’ll always be grateful for.`,
+
+                `today, i’m not only celebrating the day you were born, but also the person you’ve grown into and all the little things that make you, well, you. i hope seventeen brings you closer to the things you’ve been wishing for, gives you more reasons to be proud of yourself, and reminds you of just how much you’re capable of. may this new chapter be filled with beautiful things, meaningful moments, and so many little reasons to be happy.`,
+
+                `i may not always know the right words to say, and i know i won’t always get everything right, but i hope you never have to question how much you mean to me. i wanna be someone you can always lean on, someone who listens to your stories, understands your worries, and stays by your side through the good and not so good days.`,
+
+                ` you don’t have to pretend to be strong around me or figure everything out on your own. i want you to feel comfortable being yourself, even on the days when things don’t go as planned or when you don’t feel like your usual self. even on your hardest days, you’re still someone i wanna understand, care for, and be there for. you never have to earn that kind of love by always being okay.`,
+
+                `this world is full of beautiful things, but somehow, having you in my life makes it all feel a little more beautiful. you’re not only someone i love, but also someone who inspires me to become a better person every day. you’ve made me realize that love doesn’t have to be perfect to be beautiful; it just has to be real. and i’m so grateful that i get to share something this real with you.`,
+
+                `here’s to all the beautiful memories we’ve made, and to all the ones still waiting for us. i can’t wait to make a whole lot more with you. happy seventeen, lichiipss. i love you ˋˏ♡ˎˊ .`
+            ]
+        };
+    </script>
+    <!-- ============================ AKHIR BLOK TEKS ============================ -->
+
+
+    <script>
+    /* ==========================================================================
+       KODE UTAMA — tidak perlu diedit untuk mengganti ucapan.
+       1) Dasar     : helper, penyimpanan, daftar event listener (agar bersih dibereskan)
+       2) Teks      : mengisi badge, judul, dan paragraf surat apa adanya
+       3) Video     : latar video, putar/jeda/ulang, aman bila autoplay dibatasi / file gagal
+       4) Efek      : kanvas partikel, parallax halus, ledakan kilau saat klik/sentuh
+       5) Kontrol   : cahaya, partikel, ukuran huruf, fokus baca, navigasi, progres
+       ========================================================================== */
+    (function () {
+        'use strict';
+
+        /* ------------------------------------------------------------------
+           1) DASAR
+           ------------------------------------------------------------------ */
+        const D = window.MESSAGE_DATA || {};
+        const root = document.documentElement;
+        const body = document.body;
+        const $ = (sel) => document.querySelector(sel);
+
+        const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const damp = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));   // halus & bebas frame-rate
+
+        const reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+        // Semua listener dicatat → bisa dilepas bersih saat halaman ditutup
+        const disposers = [];
+        function on(target, type, fn, opts) {
+            target.addEventListener(type, fn, opts);
+            disposers.push(function () { target.removeEventListener(type, fn, opts); });
+        }
+
+        // Penyimpanan preferensi (aman bila localStorage diblokir)
+        const store = {
+            get: function (k) { try { return window.localStorage.getItem('ss17.' + k); } catch (e) { return null; } },
+            set: function (k, v) { try { window.localStorage.setItem('ss17.' + k, v); } catch (e) { /* diabaikan */ } }
+        };
+
+        /* ------------------------------------------------------------------
+           2) TEKS — ditampilkan persis (textContent: tanpa HTML, tanpa ubah huruf/typo)
+           ------------------------------------------------------------------ */
+        $('#badge').textContent = typeof D.badge === 'string' ? D.badge : '';
+
+        const titleEl = $('#title');
+        const titleText = typeof D.title === 'string' ? D.title : '';
+        titleEl.setAttribute('aria-label', titleText);
+        titleText.split(' ').forEach(function (word, i, all) {
+            const span = document.createElement('span');
+            span.className = 'w';
+            span.style.setProperty('--i', String(i));
+            span.textContent = word;
+            titleEl.appendChild(span);
+            if (i < all.length - 1) titleEl.appendChild(document.createTextNode(' '));
+        });
+
+        const letterBody = $('#letter-body');
+        (Array.isArray(D.paragraphs) ? D.paragraphs : []).forEach(function (text, i) {
+            if (typeof text !== 'string') return;
+            const p = document.createElement('p');
+            p.className = 'reveal';
+            p.style.setProperty('--d', Math.min(i, 3) * 0.08 + 's');
+            p.textContent = text;
+            letterBody.appendChild(p);
+        });
+
+        // Muncul halus saat di-scroll
+        const revealEls = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+        if ('IntersectionObserver' in window) {
+            const io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+                });
+            }, { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
+            revealEls.forEach(function (el) { io.observe(el); });
+            disposers.push(function () { io.disconnect(); });
+        } else {
+            revealEls.forEach(function (el) { el.classList.add('in'); });
+        }
+
+        /* ------------------------------------------------------------------
+           3) VIDEO LATAR
+           ------------------------------------------------------------------ */
+        const vid = $('#bg-video');
+        const bPlay = $('#b-play');
+        const bRestart = $('#b-restart');
+        const vState = { ok: false, userPaused: false };
+
+        function setVideoButtons() {
+            const playing = vState.ok && !vid.paused && !vid.ended;
+            bPlay.textContent = playing ? '|| jeda' : '> putar';
+            bPlay.setAttribute('aria-pressed', playing ? 'false' : 'true');
+        }
+        function lockVideoButtons(lock) {
+            bPlay.disabled = lock;
+            bRestart.disabled = lock;
+            if (lock) { bPlay.textContent = 'video -'; }
+        }
+        // Pemutaran aman: janji (promise) yang ditolak (autoplay diblokir) ditangani, tidak ada error "uncaught"
+        function safePlay() {
+            try {
+                const pr = vid.play();
+                if (pr && typeof pr.then === 'function') {
+                    return pr.then(setVideoButtons, function () { setVideoButtons(); });
+                }
+            } catch (e) { /* diabaikan */ }
+            setVideoButtons();
+            return Promise.resolve();
+        }
+        function videoReady() {
+            if (vState.ok) return;
+            vState.ok = true;
+            lockVideoButtons(false);
+            root.classList.add('has-video');
+            root.classList.remove('no-video');
+            setVideoButtons();
+        }
+        function videoFailed() {
+            vState.ok = false;
+            root.classList.remove('has-video');
+            root.classList.add('no-video');       // latar cadangan gradasi tetap tampil
+            lockVideoButtons(true);
+        }
+
+        vid.muted = true;
+        vid.defaultMuted = true;
+        vid.loop = true;
+        vid.playsInline = true;
+        lockVideoButtons(true);                    // dikunci sampai video benar-benar siap
+        bPlay.textContent = '> putar';
+
+        on(vid, 'loadeddata', videoReady);
+        on(vid, 'canplay', videoReady);
+        on(vid, 'error', videoFailed);
+        on(vid, 'play', setVideoButtons);
+        on(vid, 'pause', setVideoButtons);
+
+        vid.src = typeof D.videoSrc === 'string' && D.videoSrc ? D.videoSrc : 'lily_bg_mp4.mp4';
+        if (vid.error) videoFailed();
+        else if (vid.readyState >= 2) videoReady();
+
+        if (reduced) {
+            vState.userPaused = true;              // "kurangi gerakan": biarkan terjeda di bingkai pertama
+            vid.pause();
+        } else {
+            safePlay();
+        }
+
+        on(bPlay, 'click', function () {
+            if (!vState.ok) return;
+            if (vid.paused) { vState.userPaused = false; safePlay(); }
+            else { vState.userPaused = true; vid.pause(); }
+        });
+        on(bRestart, 'click', function () {
+            if (!vState.ok) return;
+            try { vid.currentTime = 0; } catch (e) { /* diabaikan */ }
+            vState.userPaused = false;
+            safePlay();
+        });
+        // Autoplay dibatasi (mis. mode hemat daya iOS)? Coba lagi pada sentuhan pertama
+        on(window, 'pointerdown', function () {
+            if (vState.ok && vid.paused && !vState.userPaused) safePlay();
+        }, { passive: true });
+        // Hemat baterai: jeda saat tab disembunyikan, lanjut saat kembali
+        on(document, 'visibilitychange', function () {
+            if (!vState.ok) return;
+            if (document.hidden) vid.pause();
+            else if (!vState.userPaused) safePlay();
+        });
+
+        /* ------------------------------------------------------------------
+           4) EFEK — kanvas partikel + parallax halus
+           ------------------------------------------------------------------ */
+        const cv = $('#fx-canvas');
+        const ctx = cv.getContext('2d');
+        const glowEl = $('#fx-glow');
+        let W = 1, H = 1, dpr = 1;
+
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth || 1;
+            H = window.innerHeight || 1;
+            cv.width = Math.round(W * dpr);
+            cv.height = Math.round(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        on(window, 'resize', resize);
+
+        // Palet partikel (selaras warna video): pink · magenta · lavender · biru-putih · kuning hangat
+        const PAL = [
+            { rgb: '255,122,168', w: 3 }, { rgb: '240,34,127', w: 1 }, { rgb: '185,162,255', w: 2 },
+            { rgb: '212,228,255', w: 2 }, { rgb: '255,195,82', w: 1 }
+        ];
+        const palBag = [];
+        PAL.forEach(function (c, i) { for (let k = 0; k < c.w; k++) palBag.push(i); });
+        const pickColor = () => palBag[(Math.random() * palBag.length) | 0];
+
+        // Sprite pra-render (lebih ringan daripada menggambar gradien tiap frame)
+        function makeSprite(kind, rgb) {
+            const S = 64, c = document.createElement('canvas');
+            c.width = c.height = S;
+            const g = c.getContext('2d');
+            g.translate(S / 2, S / 2);
+            if (kind === 'glow') {
+                const gr = g.createRadialGradient(0, 0, 0, 0, 0, S / 2);
+                gr.addColorStop(0, 'rgba(' + rgb + ',1)');
+                gr.addColorStop(0.28, 'rgba(' + rgb + ',0.5)');
+                gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+                g.fillStyle = gr;
+                g.fillRect(-S / 2, -S / 2, S, S);
+            } else if (kind === 'star') {
+                const gr = g.createRadialGradient(0, 0, 0, 0, 0, S / 2);
+                gr.addColorStop(0, 'rgba(' + rgb + ',0.75)');
+                gr.addColorStop(0.35, 'rgba(' + rgb + ',0.18)');
+                gr.addColorStop(1, 'rgba(' + rgb + ',0)');
+                g.fillStyle = gr;
+                g.fillRect(-S / 2, -S / 2, S, S);
+                g.fillStyle = 'rgba(255,255,255,0.95)';
+                for (let r = 0; r < 2; r++) {
+                    g.beginPath();
+                    g.moveTo(0, -S * 0.46); g.lineTo(3, 0); g.lineTo(0, S * 0.46); g.lineTo(-3, 0);
+                    g.closePath(); g.fill();
+                    g.rotate(Math.PI / 2);
+                }
+            } else {   // petal
+                const gr = g.createLinearGradient(0, -24, 0, 24);
+                gr.addColorStop(0, 'rgba(255,255,255,0.95)');
+                gr.addColorStop(0.4, 'rgba(' + rgb + ',0.95)');
+                gr.addColorStop(1, 'rgba(' + rgb + ',0.35)');
+                g.fillStyle = gr;
+                g.beginPath();
+                g.ellipse(0, 0, 9, 24, 0, 0, Math.PI * 2);
+                g.fill();
+            }
+            return c;
+        }
+        const SPR = { glow: [], star: [], petal: [] };
+        PAL.forEach(function (c) {
+            SPR.glow.push(makeSprite('glow', c.rgb));
+            SPR.star.push(makeSprite('star', c.rgb));
+            SPR.petal.push(makeSprite('petal', c.rgb));
+        });
+
+        // Partikel latar (mengambang pelan, berkedip, ikut parallax)
+        const AMB_N = coarse ? 38 : 72;
+        const amb = [];
+        for (let i = 0; i < AMB_N; i++) {
+            const z = 0.3 + Math.random() * 0.7;
+            amb.push({
+                x: Math.random() * W, y: Math.random() * H, z: z,
+                vy: -(6 + Math.random() * 16) * z, sway: 6 + Math.random() * 14, ph: Math.random() * 6.283,
+                size: (10 + Math.random() * 20) * (0.6 + z * 0.6),
+                col: pickColor(), kind: Math.random() < 0.55 ? 'star' : (Math.random() < 0.5 ? 'glow' : 'petal'),
+                rot: Math.random() * 6.283, vr: (Math.random() - 0.5) * 0.8
+            });
+        }
+        // Ledakan kilau (klik / sentuh / tombol kejutan)
+        const bursts = [];
+        const BURST_MAX = 360;
+        function burst(x, y, n) {
+            n = n || (coarse ? 18 : 26);
+            for (let i = 0; i < n; i++) {
+                const a = Math.random() * Math.PI * 2, sp = 70 + Math.random() * 230;
+                const petal = Math.random() < 0.38;
+                bursts.push({
+                    x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 40, rot: Math.random() * 6.283,
+                    vr: (Math.random() - 0.5) * 6, size: petal ? 14 + Math.random() * 12 : 10 + Math.random() * 18,
+                    life: 0, max: 0.9 + Math.random() * 0.9, col: pickColor(), kind: petal ? 'petal' : 'star'
+                });
+            }
+            while (bursts.length > BURST_MAX) bursts.shift();
+        }
+
+        // Pengaturan partikel latar: 0 = mati, 1 = sedikit, 2 = banyak
+        const PART_LEVELS = [{ name: 'mati', k: 0 }, { name: 'sedikit', k: 0.45 }, { name: 'banyak', k: 1 }];
+        let partLevel = reduced ? 0 : (coarse ? 1 : 2);
+        let partSm = PART_LEVELS[partLevel].k;
+
+        // Input halus (dua tahap peredam → tanpa sentakan)
+        const ptr = { x: 0, y: 0 }, p1 = { x: 0, y: 0 }, p2 = { x: 0, y: 0 };
+        function setPtr(cx, cy) { ptr.x = (cx / W) * 2 - 1; ptr.y = (cy / H) * 2 - 1; }
+        on(window, 'pointermove', function (e) { setPtr(e.clientX, e.clientY); }, { passive: true });
+        on(window, 'touchmove', function (e) { if (e.touches && e.touches[0]) setPtr(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+        on(document, 'mouseleave', function () { ptr.x = 0; ptr.y = 0; });
+
+        // Klik / sentuh di mana saja (kecuali kontrol) → kilau halus
+        on(window, 'pointerdown', function (e) {
+            const t = e.target;
+            if (t && t.closest && t.closest('.hud, button, a, input, select, textarea')) return;
+            setPtr(e.clientX, e.clientY);
+            burst(e.clientX, e.clientY);
+        }, { passive: true });
+
+        let t = 0, last = 0, raf = 0, running = false, scrollSm = 0;
+        const isPortrait = () => W / H < 0.8;
+
+        function step(dt) {
+            t += dt;
+            const k = reduced ? 0 : 1;
+            const tx = clamp(ptr.x + Math.sin(t * 0.27) * 0.28 * k, -1.2, 1.2);
+            const ty = clamp(ptr.y + Math.cos(t * 0.21) * 0.2 * k, -1.2, 1.2);
+            p1.x = damp(p1.x, tx, 3.2, dt); p1.y = damp(p1.y, ty, 3.2, dt);
+            p2.x = damp(p2.x, p1.x, 5.5, dt); p2.y = damp(p2.y, p1.y, 5.5, dt);
+
+            const sy = window.scrollY || window.pageYOffset || 0;
+            scrollSm = damp(scrollSm, sy, 4, dt);
+            partSm = damp(partSm, PART_LEVELS[partLevel].k, 3, dt);
+
+            // Parallax halus untuk video & cahaya
+            const m = isPortrait() ? 0.55 : 1;
+            const px = -p2.x * 16 * m, py = -p2.y * 10 * m - Math.min(scrollSm, H) * 0.02;
+            vid.style.setProperty('--px', px.toFixed(2) + 'px');
+            vid.style.setProperty('--py', py.toFixed(2) + 'px');
+            glowEl.style.transform = 'translate3d(' + (-p2.x * 26).toFixed(2) + 'px,' + (-p2.y * 18).toFixed(2) + 'px,0)';
+
+            // Partikel latar
+            for (let i = 0; i < amb.length; i++) {
+                const a = amb[i];
+                a.y += a.vy * dt;
+                a.rot += a.vr * dt;
+                if (a.y < -40) { a.y = H + 40; a.x = Math.random() * W; }
+            }
+            // Ledakan
+            for (let i = bursts.length - 1; i >= 0; i--) {
+                const b = bursts[i];
+                b.life += dt;
+                if (b.life >= b.max) { bursts.splice(i, 1); continue; }
+                const fr = Math.exp(-2.4 * dt);
+                b.vx *= fr; b.vy = b.vy * fr + 90 * dt;
+                b.x += b.vx * dt; b.y += b.vy * dt; b.rot += b.vr * dt;
+            }
+        }
+
+        function drawSprite(spr, x, y, size, rot, alpha) {
+            if (alpha <= 0.01) return;
+            ctx.globalAlpha = alpha;
+            if (rot) {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+                ctx.drawImage(spr, -size / 2, -size / 2, size, size);
+                ctx.restore();
+            } else {
+                ctx.drawImage(spr, x - size / 2, y - size / 2, size, size);
+            }
+        }
+
+        function draw() {
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, W, H);
+            ctx.globalCompositeOperation = 'lighter';       // kilau menyatu dengan cahaya video
+            const sOff = scrollSm * 0.06;
+            const count = amb.length * partSm;
+            for (let i = 0; i < amb.length; i++) {
+                const a = amb[i];
+                const vis = clamp(count - i, 0, 1);          // partikel muncul/hilang bertahap saat tingkat diubah
+                if (vis <= 0) continue;
+                const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.5 + a.ph));
+                let x = a.x + Math.sin(t * 0.4 + a.ph) * a.sway + p2.x * 38 * a.z;
+                let y = (a.y - sOff * a.z) % (H + 80);
+                if (y < -40) y += H + 80;
+                y += p2.y * 22 * a.z;
+                drawSprite(SPR[a.kind][a.col], x, y, a.size, a.kind === 'glow' ? 0 : a.rot, 0.55 * tw * vis * (0.5 + a.z * 0.5));
+            }
+            for (let i = 0; i < bursts.length; i++) {
+                const b = bursts[i];
+                const f = b.life / b.max;
+                const al = (1 - f) * (f < 0.1 ? f / 0.1 : 1);
+                drawSprite(SPR[b.kind][b.col], b.x, b.y, b.size * (1 - 0.35 * f), b.rot, 0.95 * al);
+            }
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function frame(now) {
+            if (!running) return;
+            raf = window.requestAnimationFrame(frame);
+            const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+            last = now;
+            step(dt);
+            draw();
+        }
+        function startLoop() {
+            if (running) return;
+            running = true;
+            last = performance.now();
+            raf = window.requestAnimationFrame(frame);
+        }
+        function stopLoop() {
+            running = false;
+            window.cancelAnimationFrame(raf);
+        }
+        on(document, 'visibilitychange', function () { if (document.hidden) stopLoop(); else startLoop(); });
+        startLoop();
+
+        /* ------------------------------------------------------------------
+           5) KONTROL — cahaya, partikel, huruf, fokus, navigasi, progres
+           ------------------------------------------------------------------ */
+        // Cahaya / overlay: ringan · sedang · kuat
+        const OV = ['ringan', 'sedang', 'kuat'];
+        let ovLevel = 1;
+        const savedOv = parseInt(store.get('ov'), 10);
+        if (savedOv >= 0 && savedOv <= 2) ovLevel = savedOv;
+        const bOverlay = $('#b-overlay');
+        function applyOverlay() {
+            body.classList.remove('ov-0', 'ov-1', 'ov-2');
+            body.classList.add('ov-' + ovLevel);
+            bOverlay.textContent = 'cahaya: ' + OV[ovLevel];
+            store.set('ov', String(ovLevel));
+        }
+        on(bOverlay, 'click', function () { ovLevel = (ovLevel + 1) % 3; applyOverlay(); });
+        applyOverlay();
+
+        // Partikel latar: mati · sedikit · banyak
+        const bParticles = $('#b-particles');
+        function applyParticles() {
+            bParticles.textContent = 'partikel: ' + PART_LEVELS[partLevel].name;
+            store.set('part', String(partLevel));
+        }
+        const savedPart = parseInt(store.get('part'), 10);
+        if (!reduced && savedPart >= 0 && savedPart <= 2) { partLevel = savedPart; partSm = PART_LEVELS[partLevel].k; }
+        on(bParticles, 'click', function () { partLevel = (partLevel + 1) % 3; applyParticles(); });
+        applyParticles();
+
+        // Ukuran huruf surat
+        const sizeBtns = Array.prototype.slice.call(document.querySelectorAll('[data-size]'));
+        function applySize(size) {
+            if (['sm', 'md', 'lg'].indexOf(size) < 0) size = 'md';
+            body.classList.remove('fs-sm', 'fs-md', 'fs-lg');
+            body.classList.add('fs-' + size);
+            sizeBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.size === size ? 'true' : 'false'); });
+            store.set('fs', size);
+        }
+        sizeBtns.forEach(function (b) { on(b, 'click', function () { applySize(b.dataset.size); }); });
+        applySize(store.get('fs') || 'md');
+
+        // Fokus baca
+        const bFocus = $('#b-focus');
+        on(bFocus, 'click', function () {
+            const f = !body.classList.contains('focus');
+            body.classList.toggle('focus', f);
+            bFocus.setAttribute('aria-pressed', f ? 'true' : 'false');
+        });
+
+        // Navigasi: masuk ke surat, ke atas, ke bawah
+        const behavior = reduced ? 'auto' : 'smooth';
+        const letterSec = $('#letter');
+        const flash = $('#fx-flash');
+        function doFlash() {
+            if (reduced) return;
+            flash.classList.remove('go');
+            void flash.offsetWidth;                 // mulai ulang animasi
+            flash.classList.add('go');
+        }
+        const btnEnter = $('#btn-enter');
+        on(btnEnter, 'click', function () {
+            const r = btnEnter.getBoundingClientRect();
+            burst(r.left + r.width / 2, r.top + r.height / 2, coarse ? 28 : 40);
+            doFlash();
+            letterSec.scrollIntoView({ behavior: behavior, block: 'start' });
+        });
+        on($('#b-top'), 'click', function () { window.scrollTo({ top: 0, behavior: behavior }); });
+        on($('#b-bottom'), 'click', function () {
+            const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            window.scrollTo({ top: max, behavior: behavior });
+        });
+
+        // Kejutan: tiga ledakan kilau + kilatan lembut
+        let surpriseTimers = [];
+        on($('#b-surprise'), 'click', function () {
+            doFlash();
+            surpriseTimers.forEach(window.clearTimeout);
+            surpriseTimers = [0, 220, 440].map(function (delay) {
+                return window.setTimeout(function () {
+                    burst(W * (0.18 + Math.random() * 0.64), H * (0.16 + Math.random() * 0.46), coarse ? 24 : 34);
+                }, delay);
+            });
+        });
+        disposers.push(function () { surpriseTimers.forEach(window.clearTimeout); });
+
+        // HUD bisa dilipat (default: tertutup agar tampilan utama bersih; pilihan terakhir diingat)
+        const hud = $('#hud');
+        const hudToggle = $('#hud-toggle');
+        function setHud(open) {
+            hud.classList.toggle('collapsed', !open);
+            hudToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            store.set('hud', open ? '1' : '0');
+        }
+        const savedHud = store.get('hud');
+        setHud(savedHud === '1');
+        on(hudToggle, 'click', function () { setHud(hud.classList.contains('collapsed')); });
+        on(document, 'keydown', function (e) { if (e.key === 'Escape' && !hud.classList.contains('collapsed')) setHud(false); });
+
+        // Progres baca (real-time saat scroll) + penanda posisi
+        const progressEl = $('#progress');
+        const progFill = $('#progress-fill');
+        const hudFill = $('#hud-fill');
+        const hudPct = $('#hud-pct');
+        const card = $('#letter-card');
+        let ticking = false, lastPct = -1;
+        function updateScroll() {
+            ticking = false;
+            const y = window.scrollY || window.pageYOffset || 0;
+            const vh = window.innerHeight || 1;
+            body.classList.toggle('is-reading', y > vh * 0.55);
+            body.classList.toggle('has-scrolled', y > 40);
+
+            const r = card.getBoundingClientRect();
+            // 0% saat kartu mulai masuk layar, 100% saat bagian bawah kartu terlihat penuh (atau halaman mentok di bawah)
+            const start = vh * 0.75;
+            const range = Math.max(1, r.height - vh * 0.1);
+            const atEnd = y + vh >= document.documentElement.scrollHeight - 2;
+            const p = atEnd && y > vh * 0.5 ? 1 : clamp((start - r.top) / range, 0, 1);
+            const pct = Math.round(p * 100);
+            progFill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+            hudFill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+            if (pct !== lastPct) {
+                lastPct = pct;
+                hudPct.textContent = pct + '%';
+                progressEl.setAttribute('aria-valuenow', String(pct));
+            }
+        }
+        function onScroll() {
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(updateScroll);
+        }
+        on(window, 'scroll', onScroll, { passive: true });
+        on(window, 'resize', onScroll);
+        updateScroll();
+
+        // Bersih-bersih saat halaman ditutup
+        on(window, 'pagehide', function () {
+            stopLoop();
+            disposers.splice(0).forEach(function (fn) { fn(); });
+        });
+    })();
+    </script>
+</body>
+</html>
